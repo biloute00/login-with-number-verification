@@ -25,12 +25,12 @@ def make_pkce_pair() -> tuple[str, str]:
     return verifier, challenge
 
 
-def build_authorization_url(state: str, code_challenge: str) -> str:
+def build_authorization_url(state: str, code_challenge: str, redirect_uri: str) -> str:
     auth_endpoint, _ = resolve_endpoints()
     params = {
         "response_type": "code",
         "client_id": config.CLIENT_ID,
-        "redirect_uri": config.REDIRECT_URI,
+        "redirect_uri": redirect_uri,
         "scope": config.SCOPE,
         "state": state,
         "prompt": "none",
@@ -40,12 +40,12 @@ def build_authorization_url(state: str, code_challenge: str) -> str:
     return f"{auth_endpoint}?{urlencode(params)}"
 
 
-def exchange_code_for_token(code: str, code_verifier: str) -> dict:
+def exchange_code_for_token(code: str, code_verifier: str, redirect_uri: str) -> dict:
     _, token_endpoint = resolve_endpoints()
     data = {
         "grant_type": "authorization_code",
         "code": code,
-        "redirect_uri": config.REDIRECT_URI,
+        "redirect_uri": redirect_uri,
         "client_id": config.CLIENT_ID,
         "code_verifier": code_verifier,
     }

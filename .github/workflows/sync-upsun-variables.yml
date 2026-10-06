@@ -33,7 +33,6 @@ jobs:
         env:
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-          REDIRECT_URI: ${{ secrets.REDIRECT_URI }}
           OPENID_CONFIG_URL: ${{ secrets.OPENID_CONFIG_URL }}
           AUTHORIZATION_ENDPOINT: ${{ secrets.AUTHORIZATION_ENDPOINT }}
           TOKEN_ENDPOINT: ${{ secrets.TOKEN_ENDPOINT }}
@@ -63,7 +62,6 @@ jobs:
 
           sync_var CLIENT_ID "$CLIENT_ID" true
           sync_var CLIENT_SECRET "$CLIENT_SECRET" true
-          sync_var REDIRECT_URI "$REDIRECT_URI" false
           sync_var OPENID_CONFIG_URL "$OPENID_CONFIG_URL" false
           sync_var AUTHORIZATION_ENDPOINT "$AUTHORIZATION_ENDPOINT" false
           sync_var TOKEN_ENDPOINT "$TOKEN_ENDPOINT" false
