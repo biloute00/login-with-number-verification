@@ -18,6 +18,15 @@ def _env(name: str, default: str = "") -> str:
 CLIENT_ID = _env("CLIENT_ID", "REPLACE_WITH_CLIENT_ID")
 CLIENT_SECRET = _env("CLIENT_SECRET", "")  # leave empty for a public client using PKCE only
 
+# For operators that require private_key_jwt client authentication (RFC 7523)
+# instead of a client_secret - e.g. Orange's "JWT assertion" JWKS requirement.
+# PEM-encoded private key whose public half was registered with the operator
+# as a JWKS. Takes priority over CLIENT_SECRET when set. "\n" is unescaped
+# so the key can be stored as a single-line environment variable.
+CLIENT_ASSERTION_PRIVATE_KEY = _env("CLIENT_ASSERTION_PRIVATE_KEY", "").replace("\\n", "\n")
+# Must match the "kid" of the corresponding key in that JWKS
+CLIENT_ASSERTION_KID = _env("CLIENT_ASSERTION_KID", "")
+
 # The redirect URI isn't configured here - app/main.py builds it from each
 # request's own host, so it's always the host the app is actually running
 # on (whatever that is on a given Upsun environment) instead of a value

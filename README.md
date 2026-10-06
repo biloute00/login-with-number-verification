@@ -24,7 +24,7 @@ This app deploys on Upsun (`.upsun/config.yaml`), which builds and deploys strai
 
 One-time setup, in this repo's GitHub Settings → Secrets and variables → Actions:
 
-- **Secrets**: `UPSUN_CLI_TOKEN` (an Upsun API token, from the Upsun Console under account settings), plus the real values for `CLIENT_ID`, `CLIENT_SECRET`, `OPENID_CONFIG_URL` (or `AUTHORIZATION_ENDPOINT`/`TOKEN_ENDPOINT`), `API_ROOT`, and `SCOPE` if you need to override the default. (No `REDIRECT_URI` - see above.)
+- **Secrets**: `UPSUN_CLI_TOKEN` (an Upsun API token, from the Upsun Console under account settings), plus the real values for `CLIENT_ID`, `OPENID_CONFIG_URL` (or `AUTHORIZATION_ENDPOINT`/`TOKEN_ENDPOINT`), `API_ROOT`, and `SCOPE` if you need to override the default. (No `REDIRECT_URI` - see above.) For client authentication, set either `CLIENT_SECRET`, or - for operators requiring private_key_jwt (e.g. Orange's "JWT assertion" JWKS requirement) - `CLIENT_ASSERTION_PRIVATE_KEY` (the PEM private key whose public half you registered with the operator as a JWKS) and `CLIENT_ASSERTION_KID`.
 - **Variables**: `UPSUN_PROJECT_ID` (not sensitive - the project ID alone grants no access).
 
 Then run the workflow from the Actions tab (`Run workflow`), optionally overriding which Upsun environment to update (defaults to `main`). It stores each value on Upsun as an `env:`-prefixed variable, which is what exposes it as a plain process environment variable to the running app - re-run it whenever a credential is added or rotated.
