@@ -42,20 +42,23 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Stored on Upsun with the "env:" prefix so each becomes a plain
-          # process environment variable at runtime (app/config.py reads it
-          # via os.environ) instead of being bundled into PLATFORM_VARIABLES.
+          # The "env:" prefix is baked directly into --name (the documented
+          # form - --prefix is only for a name that doesn't already have
+          # one) so each value becomes a plain process environment variable
+          # at runtime (app/config.py reads it via os.environ) instead of
+          # being bundled into PLATFORM_VARIABLES. --update makes this an
+          # idempotent upsert: create if missing, update if present.
           sync_var() {
             local name="$1" value="$2" sensitive="$3"
             if [ -z "$value" ]; then
               echo "Skipping $name (no value set in GitHub secrets)"
               return
             fi
-            if upsun variable:get "env:$name" --project "$PROJECT_ID" --environment "$ENVIRONMENT" >/dev/null 2>&1; then
-              upsun variable:update "env:$name" --project "$PROJECT_ID" --environment "$ENVIRONMENT" --value "$value" --sensitive "$sensitive"
-            else
-              upsun variable:create --project "$PROJECT_ID" --environment "$ENVIRONMENT" --level environment --prefix env --name "$name" --value "$value" --sensitive "$sensitive"
-            fi
+            upsun variable:create \
+              --project "$PROJECT_ID" --environment "$ENVIRONMENT" \
+              --level environment --name "env:$name" \
+              --value "$value" --sensitive "$sensitive" \
+              --update
           }
 
           sync_var CLIENT_ID "$CLIENT_ID" true
