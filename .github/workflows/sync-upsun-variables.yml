@@ -1,0 +1,69 @@
+name: Sync secrets to Upsun
+
+# Manual on purpose: these values only need pushing when a credential is
+# added or rotated, not on every commit. Upsun's own GitHub source
+# integration already handles building/deploying the app on push.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Upsun environment name to update"
+        required: false
+        default: "main"
+
+permissions:
+  contents: read
+
+jobs:
+  sync-variables:
+    runs-on: ubuntu-latest
+    env:
+      UPSUN_CLI_TOKEN: ${{ secrets.UPSUN_CLI_TOKEN }}
+      UPSUN_CLI_NO_INTERACTION: "1"
+      PROJECT_ID: ${{ vars.UPSUN_PROJECT_ID }}
+      ENVIRONMENT: ${{ inputs.environment }}
+    steps:
+      - name: Install Upsun CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/upsun/cli/main/installer.sh \
+            | INSTALL_METHOD=raw INSTALL_DIR="$HOME/.local/bin" bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Push app credentials into Upsun
+        env:
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          OPENID_CONFIG_URL: ${{ secrets.OPENID_CONFIG_URL }}
+          AUTHORIZATION_ENDPOINT: ${{ secrets.AUTHORIZATION_ENDPOINT }}
+          TOKEN_ENDPOINT: ${{ secrets.TOKEN_ENDPOINT }}
+          API_ROOT: ${{ secrets.API_ROOT }}
+          SCOPE: ${{ secrets.SCOPE }}
+        run: |
+          set -euo pipefail
+
+          # The "env:" prefix is baked directly into --name (the documented
+          # form - --prefix is only for a name that doesn't already have
+          # one) so each value becomes a plain process environment variable
+          # at runtime (app/config.py reads it via os.environ) instead of
+          # being bundled into PLATFORM_VARIABLES. --update makes this an
+          # idempotent upsert: create if missing, update if present.
+          sync_var() {
+            local name="$1" value="$2" sensitive="$3"
+            if [ -z "$value" ]; then
+              echo "Skipping $name (no value set in GitHub secrets)"
+              return
+            fi
+            upsun variable:create \
+              --project "$PROJECT_ID" --environment "$ENVIRONMENT" \
+              --level environment --name "env:$name" \
+              --value "$value" --sensitive "$sensitive" \
+              --update
+          }
+
+          sync_var CLIENT_ID "$CLIENT_ID" true
+          sync_var CLIENT_SECRET "$CLIENT_SECRET" true
+          sync_var OPENID_CONFIG_URL "$OPENID_CONFIG_URL" false
+          sync_var AUTHORIZATION_ENDPOINT "$AUTHORIZATION_ENDPOINT" false
+          sync_var TOKEN_ENDPOINT "$TOKEN_ENDPOINT" false
+          sync_var API_ROOT "$API_ROOT" false
+          sync_var SCOPE "$SCOPE" false

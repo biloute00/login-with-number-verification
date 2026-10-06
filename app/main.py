@@ -40,6 +40,20 @@ def _cleanup_pending() -> None:
         _pending_logins.pop(state, None)
 
 
+def _redirect_uri(request: Request) -> str:
+    """The callback URL for whichever host this request actually arrived on.
+
+    Must stay absolute and match what's registered with the operator, but
+    there's no need to hardcode (or deploy-time configure) that host:
+    Upsun's app container sits behind a TLS-terminating router, so
+    request.url.scheme reports "http" even on the live https route - force
+    it from the Host header instead of trusting that.
+    """
+    host = request.headers.get("host", request.url.netloc)
+    scheme = "http" if host.split(":")[0] in ("localhost", "127.0.0.1") else "https"
+    return f"{scheme}://{host}/callback"
+
+
 def _result_page(request: Request, *, ok: bool, title: str, detail: str, hint: str = "", status_code: int = 200):
     return templates.TemplateResponse(
         request,
@@ -68,12 +82,14 @@ def login(request: Request, phone_number: str = Form(...)):
     _cleanup_pending()
     state = uuid.uuid4().hex
     code_verifier, code_challenge = oidc_client.make_pkce_pair()
+    redirect_uri = _redirect_uri(request)
     _pending_logins[state] = {
         "phone_number": phone_number,
         "code_verifier": code_verifier,
+        "redirect_uri": redirect_uri,
         "created_at": time.time(),
     }
-    auth_url = oidc_client.build_authorization_url(state, code_challenge)
+    auth_url = oidc_client.build_authorization_url(state, code_challenge, redirect_uri)
     return RedirectResponse(auth_url, status_code=302)
 
 
@@ -109,7 +125,7 @@ def callback(
         return _result_page(request, ok=False, title="Login failed", detail="No authorization code was returned.", status_code=400)
 
     try:
-        token_response = oidc_client.exchange_code_for_token(code, pending["code_verifier"])
+        token_response = oidc_client.exchange_code_for_token(code, pending["code_verifier"], pending["redirect_uri"])
         access_token = token_response["access_token"]
         verified = verify_phone_number(access_token, pending["phone_number"])
     except VerifyError as exc:

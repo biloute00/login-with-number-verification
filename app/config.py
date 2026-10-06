@@ -18,8 +18,12 @@ def _env(name: str, default: str = "") -> str:
 CLIENT_ID = _env("CLIENT_ID", "REPLACE_WITH_CLIENT_ID")
 CLIENT_SECRET = _env("CLIENT_SECRET", "")  # leave empty for a public client using PKCE only
 
-# Must match a redirect URI registered with the operator
-REDIRECT_URI = _env("REDIRECT_URI", "http://localhost:8000/callback")
+# The redirect URI isn't configured here - app/main.py builds it from each
+# request's own host, so it's always the host the app is actually running
+# on (whatever that is on a given Upsun environment) instead of a value
+# that has to be kept in sync separately. It still must be registered with
+# the operator exactly as the app will send it, e.g. https://<your-upsun-
+# domain>/callback.
 
 # Either set OPENID_CONFIG_URL so the app discovers the two endpoints below...
 OPENID_CONFIG_URL = _env("OPENID_CONFIG_URL", "")
