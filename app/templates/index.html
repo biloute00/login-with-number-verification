@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="card">
+    <h1>Log in with your phone number</h1>
+    <p class="muted">We'll check it against the SIM in this device &mdash; no code to type.</p>
+    <form method="post" action="/login">
+      <label for="phone_number">Phone number</label>
+      <input
+        type="tel" id="phone_number" name="phone_number"
+        placeholder="+33612345678" pattern="^\+[1-9][0-9]{4,14}$"
+        required autofocus
+      >
+      {% if error %}<p class="error">{{ error }}</p>{% endif %}
+      <button type="submit">Continue</button>
+    </form>
+  </main>
+</body>
+</html>
