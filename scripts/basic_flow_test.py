@@ -13,11 +13,11 @@ Usage:
     python3 scripts/basic_flow_test.py [--phone +34600000000] [--endpoint verify|share|both]
 
 Required configuration (environment variables, see .env.example):
-    CLIENT_ID, REDIRECT_URI, API_ROOT
+    CLIENT_ID, CLIENT_ASSERTION_PRIVATE_KEY, REDIRECT_URI, API_ROOT
     and either OPENID_CONFIG_URL (for discovery) or both
     AUTHORIZATION_ENDPOINT and TOKEN_ENDPOINT directly.
 Optional:
-    CLIENT_SECRET, SCOPE, TEST_PHONE_NUMBER
+    CLIENT_ASSERTION_KID, SCOPE, TEST_PHONE_NUMBER
 """
 import argparse
 import base64
@@ -28,10 +28,12 @@ import os
 import secrets
 import sys
 import threading
+import time
 import urllib.parse
 import uuid
 import webbrowser
 
+import jwt
 import requests
 
 DEFAULT_SCOPE = "openid number-verification:verify number-verification:device-phone-number:read"
@@ -113,16 +115,32 @@ def build_authorization_url(auth_endpoint, client_id, redirect_uri, scope, state
     return f"{auth_endpoint}?{urllib.parse.urlencode(params)}"
 
 
-def exchange_code_for_token(token_endpoint, client_id, client_secret, redirect_uri, code, code_verifier):
+def build_client_assertion(token_endpoint, client_id, private_key, kid):
+    """A signed JWT used as client authentication (RFC 7523 private_key_jwt)."""
+    now = int(time.time())
+    claims = {
+        "iss": client_id,
+        "sub": client_id,
+        "aud": token_endpoint,
+        "jti": uuid.uuid4().hex,
+        "iat": now,
+        "exp": now + 300,
+    }
+    headers = {"kid": kid} if kid else None
+    return jwt.encode(claims, private_key, algorithm="RS256", headers=headers)
+
+
+def exchange_code_for_token(token_endpoint, client_id, private_key, kid, redirect_uri, code, code_verifier):
     data = {
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": redirect_uri,
         "client_id": client_id,
         "code_verifier": code_verifier,
+        "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        "client_assertion": build_client_assertion(token_endpoint, client_id, private_key, kid),
     }
-    auth = (client_id, client_secret) if client_secret else None
-    resp = requests.post(token_endpoint, data=data, auth=auth, timeout=15)
+    resp = requests.post(token_endpoint, data=data, timeout=15)
     if not resp.ok:
         sys.exit(f"Token exchange failed: {resp.status_code} {resp.text}")
     return resp.json()
@@ -166,7 +184,8 @@ def main():
     args = parser.parse_args()
 
     client_id = env("CLIENT_ID", required=True)
-    client_secret = env("CLIENT_SECRET")
+    private_key = env("CLIENT_ASSERTION_PRIVATE_KEY", required=True).replace("\\n", "\n")
+    kid = env("CLIENT_ASSERTION_KID")
     redirect_uri = env("REDIRECT_URI", default="http://localhost:8743/callback")
     api_root = env("API_ROOT", required=True).rstrip("/")
     scope = env("SCOPE", default=DEFAULT_SCOPE)
@@ -204,7 +223,7 @@ def main():
         sys.exit(f"No authorization code in callback: {callback_params}")
 
     print("3. Got an authorization code, exchanging it for an access token ...")
-    token_response = exchange_code_for_token(token_endpoint, client_id, client_secret, redirect_uri, code, code_verifier)
+    token_response = exchange_code_for_token(token_endpoint, client_id, private_key, kid, redirect_uri, code, code_verifier)
     access_token = token_response.get("access_token")
     if not access_token:
         sys.exit(f"No access_token in token response: {token_response}")

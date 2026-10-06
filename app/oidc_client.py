@@ -2,8 +2,11 @@
 import base64
 import hashlib
 import secrets
+import time
+import uuid
 from urllib.parse import urlencode
 
+import jwt
 import requests
 
 from . import config
@@ -40,6 +43,25 @@ def build_authorization_url(state: str, code_challenge: str, redirect_uri: str) 
     return f"{auth_endpoint}?{urlencode(params)}"
 
 
+def _build_client_assertion(token_endpoint: str) -> str:
+    """A signed JWT used as client authentication (RFC 7523 private_key_jwt).
+
+    Signed with the private key whose public half was registered with the
+    operator as a JWKS.
+    """
+    now = int(time.time())
+    claims = {
+        "iss": config.CLIENT_ID,
+        "sub": config.CLIENT_ID,
+        "aud": token_endpoint,
+        "jti": uuid.uuid4().hex,
+        "iat": now,
+        "exp": now + 300,
+    }
+    headers = {"kid": config.CLIENT_ASSERTION_KID} if config.CLIENT_ASSERTION_KID else None
+    return jwt.encode(claims, config.CLIENT_ASSERTION_PRIVATE_KEY, algorithm="RS256", headers=headers)
+
+
 def exchange_code_for_token(code: str, code_verifier: str, redirect_uri: str) -> dict:
     _, token_endpoint = resolve_endpoints()
     data = {
@@ -48,8 +70,9 @@ def exchange_code_for_token(code: str, code_verifier: str, redirect_uri: str) ->
         "redirect_uri": redirect_uri,
         "client_id": config.CLIENT_ID,
         "code_verifier": code_verifier,
+        "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        "client_assertion": _build_client_assertion(token_endpoint),
     }
-    auth = (config.CLIENT_ID, config.CLIENT_SECRET) if config.CLIENT_SECRET else None
-    resp = requests.post(token_endpoint, data=data, auth=auth, timeout=15)
+    resp = requests.post(token_endpoint, data=data, timeout=15)
     resp.raise_for_status()
     return resp.json()
