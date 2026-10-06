@@ -32,7 +32,6 @@ jobs:
       - name: Push app credentials into Upsun
         env:
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
           CLIENT_ASSERTION_PRIVATE_KEY: ${{ secrets.CLIENT_ASSERTION_PRIVATE_KEY }}
           CLIENT_ASSERTION_KID: ${{ secrets.CLIENT_ASSERTION_KID }}
           OPENID_CONFIG_URL: ${{ secrets.OPENID_CONFIG_URL }}
@@ -63,7 +62,6 @@ jobs:
           }
 
           sync_var CLIENT_ID "$CLIENT_ID" true
-          sync_var CLIENT_SECRET "$CLIENT_SECRET" true
           sync_var CLIENT_ASSERTION_PRIVATE_KEY "$CLIENT_ASSERTION_PRIVATE_KEY" true
           sync_var CLIENT_ASSERTION_KID "$CLIENT_ASSERTION_KID" false
           sync_var OPENID_CONFIG_URL "$OPENID_CONFIG_URL" false

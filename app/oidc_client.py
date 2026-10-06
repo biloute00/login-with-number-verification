@@ -44,10 +44,10 @@ def build_authorization_url(state: str, code_challenge: str, redirect_uri: str) 
 
 
 def _build_client_assertion(token_endpoint: str) -> str:
-    """A signed JWT used as client authentication instead of a client_secret.
+    """A signed JWT used as client authentication (RFC 7523 private_key_jwt).
 
-    RFC 7523 private_key_jwt: signed with the private key whose public half
-    was registered with the operator as a JWKS.
+    Signed with the private key whose public half was registered with the
+    operator as a JWKS.
     """
     now = int(time.time())
     claims = {
@@ -70,13 +70,9 @@ def exchange_code_for_token(code: str, code_verifier: str, redirect_uri: str) ->
         "redirect_uri": redirect_uri,
         "client_id": config.CLIENT_ID,
         "code_verifier": code_verifier,
+        "client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+        "client_assertion": _build_client_assertion(token_endpoint),
     }
-    auth = None
-    if config.CLIENT_ASSERTION_PRIVATE_KEY:
-        data["client_assertion_type"] = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-        data["client_assertion"] = _build_client_assertion(token_endpoint)
-    elif config.CLIENT_SECRET:
-        auth = (config.CLIENT_ID, config.CLIENT_SECRET)
-    resp = requests.post(token_endpoint, data=data, auth=auth, timeout=15)
+    resp = requests.post(token_endpoint, data=data, timeout=15)
     resp.raise_for_status()
     return resp.json()

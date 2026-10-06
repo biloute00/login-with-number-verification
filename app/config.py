@@ -2,7 +2,7 @@
 Single source of truth for the operator / Number Verification API config.
 
 Every value below is a placeholder read from an environment variable. Real
-values (client id/secret, the operator's OIDC endpoints, the API root) come
+values (client id, the operator's OIDC endpoints, the API root) come
 from onboarding with the operator and must never be hardcoded here - set
 them as environment variables instead (see .env.example in this folder).
 Every other module that needs one of these values imports it from here.
@@ -16,12 +16,10 @@ def _env(name: str, default: str = "") -> str:
 
 # OAuth client registered with the operator for this app
 CLIENT_ID = _env("CLIENT_ID", "REPLACE_WITH_CLIENT_ID")
-CLIENT_SECRET = _env("CLIENT_SECRET", "")  # leave empty for a public client using PKCE only
 
-# For operators that require private_key_jwt client authentication (RFC 7523)
-# instead of a client_secret - e.g. Orange's "JWT assertion" JWKS requirement.
-# PEM-encoded private key whose public half was registered with the operator
-# as a JWKS. Takes priority over CLIENT_SECRET when set. "\n" is unescaped
+# Client authentication uses private_key_jwt (RFC 7523) exclusively - e.g.
+# Orange's "JWT assertion" JWKS requirement. PEM-encoded private key whose
+# public half was registered with the operator as a JWKS. "\n" is unescaped
 # so the key can be stored as a single-line environment variable.
 CLIENT_ASSERTION_PRIVATE_KEY = _env("CLIENT_ASSERTION_PRIVATE_KEY", "").replace("\\n", "\n")
 # Must match the "kid" of the corresponding key in that JWKS
