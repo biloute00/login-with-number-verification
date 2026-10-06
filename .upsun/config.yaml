@@ -1,17 +1,18 @@
-# Upsun configuration, generated using AI at: 2026-10-06T13:24:02.124Z
-# AI can make mistakes. Please modify this file to suit your needs.
+# Upsun configuration for the Number Verification login demo (app/main.py, FastAPI)
 applications:
   app:
-    type: nodejs:26
+    type: "python:3.12"
     build:
       flavor: none
     hooks:
       build: |
         set -ex
-        # No build commands specified; placeholder for user to add if needed
+        pip install -r app/requirements.txt
     web:
+      upstream:
+        socket_family: tcp
       commands:
-        start: node index.js
+        start: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
       locations:
         /:
           passthru: true
