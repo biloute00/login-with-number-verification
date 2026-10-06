@@ -48,6 +48,11 @@ jobs:
           # at runtime (app/config.py reads it via os.environ) instead of
           # being bundled into PLATFORM_VARIABLES. --update makes this an
           # idempotent upsert: create if missing, update if present.
+          #
+          # Every flag uses "--flag=value" (not "--flag value"): a PEM key
+          # starts with "-----BEGIN...", and the space-separated form makes
+          # the CLI's arg parser treat that leading "-----" as another flag
+          # instead of --value's argument ("bad flag syntax").
           sync_var() {
             local name="$1" value="$2" sensitive="$3"
             if [ -z "$value" ]; then
@@ -55,9 +60,9 @@ jobs:
               return
             fi
             upsun variable:create \
-              --project "$PROJECT_ID" --environment "$ENVIRONMENT" \
-              --level environment --name "env:$name" \
-              --value "$value" --sensitive "$sensitive" \
+              --project="$PROJECT_ID" --environment="$ENVIRONMENT" \
+              --level=environment --name="env:$name" \
+              --value="$value" --sensitive="$sensitive" \
               --update
           }
 
